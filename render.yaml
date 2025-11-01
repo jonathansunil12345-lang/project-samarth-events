@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: project-samarth-events
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATAGOV_API_KEY
+        value: 579b464db66ec23bdd000001610dbcacf605486f7925fe91c9f5d0ee
+    healthCheckPath: /health
+    rootDir: backend
+

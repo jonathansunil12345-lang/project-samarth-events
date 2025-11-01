@@ -25,13 +25,14 @@ class AskResponse(BaseModel):
 
 app = FastAPI(title="Project Samarth Prototype", version="0.1.0")
 
-# Configure CORS - allow all origins for public API
+# Configure CORS - allow all origins for public API (including Netlify frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins
+    allow_origins=["*"],  # Allow all origins (includes all Netlify deployments)
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=3600,  # Cache preflight requests for 1 hour
 )
 
 # Configure logging
