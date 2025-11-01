@@ -490,28 +490,65 @@
       responseCard.style.display = "none";
 
       const backendUrl = DEFAULT_BACKEND.replace(/\/$/, "");
+      
+      // Create an AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout
 
       try {
         const res = await fetch(`${backendUrl}/ask`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question })
+          body: JSON.stringify({ question }),
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
         if (!res.ok) {
           let detail = "Something went wrong.";
+          let errorCode = res.status;
           try {
             const err = await res.json();
-            detail = err.detail || detail;
+            detail = err.detail || err.message || detail;
           } catch (parseErr) {
-            // keep default detail
+            // If we can't parse JSON, use status text
+            detail = res.statusText || `HTTP ${errorCode} error`;
           }
+          
+          // Provide more helpful error messages
+          if (errorCode === 504) {
+            detail = "Request timed out. The query took too long to process. Please try a simpler question.";
+          } else if (errorCode === 500) {
+            detail = `Server error: ${detail}`;
+          } else if (errorCode === 400) {
+            detail = `Invalid request: ${detail}`;
+          }
+          
           throw new Error(detail);
         }
 
         const data = await res.json();
-        answerText.textContent = data.answer;
+        
+        // Validate response structure
+        if (!data || typeof data !== "object") {
+          throw new Error("Invalid response format from server");
+        }
+        
+        // Handle empty or missing answer
+        if (!data.answer || data.answer.trim() === "") {
+          answerText.textContent = "No answer was generated. This might indicate a data issue or processing error.";
+        } else {
+          answerText.textContent = data.answer;
+        }
+        
         tablesEl.innerHTML = "";
-        (data.tables || []).forEach(tbl => {
+        
+        // Handle tables
+        if (!data.tables || data.tables.length === 0) {
+          tablesEl.innerHTML = "<div style='color:var(--muted);font-style:italic;margin-top:12px;'>No data tables were generated for this query.</div>";
+        } else {
+          (data.tables || []).forEach(tbl => {
           const wrapper = document.createElement("div");
           const heading = document.createElement("h3");
           heading.textContent = tbl.title;
@@ -541,7 +578,8 @@
           table.appendChild(tbody);
           wrapper.appendChild(table);
           tablesEl.appendChild(wrapper);
-        });
+          });
+        }
         const citations = (data.citations || [])
           .map(c => `${c.dataset} → ${c.source} (resource ${c.resource_id})`);
         citationsEl.textContent = citations.length ? `Citations: ${citations.join("; ")}` : "";
@@ -552,11 +590,26 @@
         responseCard.style.display = "block";
         setStatus("Completed", false);
       } catch (err) {
+        clearTimeout(timeoutId);
         responseCard.style.display = "block";
         answerText.textContent = "";
-        tablesEl.innerHTML = `<div style="color:#ef4444;font-weight:600;">${err.message}</div>`;
-        debugEl.textContent = "";
+        
+        // Better error handling for different error types
+        let errorMessage = err.message || "Unknown error occurred";
+        
+        if (err.name === "AbortError" || err.message.includes("timeout")) {
+          errorMessage = "Request timed out. The backend may be slow or unavailable. Please try again.";
+        } else if (err.message.includes("Failed to fetch") || err.message.includes("NetworkError")) {
+          errorMessage = `Failed to connect to backend at ${backendUrl}. Please check:\n- The backend server is running\n- The URL is correct\n- Your internet connection is working`;
+        } else if (err.message.includes("CORS")) {
+          errorMessage = "CORS error: The backend may not be allowing requests from this origin.";
+        }
+        
+        tablesEl.innerHTML = `<div style="color:#ef4444;font-weight:600;white-space:pre-wrap;">Error: ${errorMessage}</div>`;
+        debugEl.textContent = err.name ? `Error type: ${err.name}` : "";
         setStatus("Error", false);
+        
+        console.error("Query error:", err);
       } finally {
         askBtn.disabled = false;
       }
