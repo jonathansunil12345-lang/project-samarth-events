@@ -127,31 +127,50 @@ class AnalysisStage(PipelineStage):
 
     def _analyze_district_extremes(self, params: Dict, datasets: Dict[str, pd.DataFrame]) -> Dict:
         """Find districts with highest/lowest production."""
-        state_a = params["state_a"]
-        state_b = params["state_b"]
-        crop = params["crop"]
+        state_a = params.get("state_a")
+        state_b = params.get("state_b")
+        crop = params.get("crop")
         year = params.get("year")
+        
+        # Validate required parameters
+        if not state_a or not state_b:
+            raise ValueError(f"Missing required states. Got state_a={state_a}, state_b={state_b}")
+        if not crop:
+            raise ValueError(f"Missing required parameter: 'crop'")
 
         agri_df = datasets["agriculture"]
 
         # Filter by crop
         subset = agri_df[agri_df["crop"] == crop]
 
+        if subset.empty:
+            raise ValueError(
+                f"No production data found for crop '{crop}' in the dataset. "
+                f"Please check if the crop name is correct."
+            )
+
+        # Determine year
         if year:
             subset = subset[subset["year"] == year]
-
-        if subset.empty:
-            raise ValueError("No production data found for the requested crop/year.")
-
-        latest_year = subset["year"].max()
-        if not year:
+            if subset.empty:
+                raise ValueError(
+                    f"No production data found for crop '{crop}' in year {year}. "
+                    f"Available years: {sorted(agri_df[agri_df['crop'] == crop]['year'].unique())}"
+                )
+        else:
+            latest_year = subset["year"].max()
             year = latest_year
-
-        subset = subset[subset["year"] == year]
+            subset = subset[subset["year"] == year]
 
         # Get data for each state
         state_a_rows = subset[subset["state"] == state_a]
         state_b_rows = subset[subset["state"] == state_b]
+        
+        # If both states have no data, raise error; otherwise continue with partial results
+        if state_a_rows.empty and state_b_rows.empty:
+            raise ValueError(
+                f"No production data found for crop '{crop}' in {state_a} or {state_b} for year {year}."
+            )
 
         result = {
             "state_a": state_a,
@@ -163,6 +182,7 @@ class AnalysisStage(PipelineStage):
         # Process state A (max)
         if state_a_rows.empty:
             result["state_a_max"] = None
+            logger.warning(f"No data found for {crop} in {state_a} for year {year}")
         else:
             max_row = state_a_rows.loc[state_a_rows["production_tonnes"].idxmax()]
             result["state_a_max"] = {
@@ -173,6 +193,7 @@ class AnalysisStage(PipelineStage):
         # Process state B (min)
         if state_b_rows.empty:
             result["state_b_min"] = None
+            logger.warning(f"No data found for {crop} in {state_b} for year {year}")
         else:
             min_row = state_b_rows.loc[state_b_rows["production_tonnes"].idxmin()]
             result["state_b_min"] = {
@@ -184,8 +205,15 @@ class AnalysisStage(PipelineStage):
 
     def _analyze_production_trend(self, params: Dict, datasets: Dict[str, pd.DataFrame]) -> Dict:
         """Analyze production trend and correlate with climate."""
-        state = params["state"]
-        crop = params["crop"]
+        # Support both "state" and "region" parameter names
+        state = params.get("state") or params.get("region")
+        if not state:
+            raise ValueError("Missing required parameter: 'state' or 'region'")
+        
+        crop = params.get("crop")
+        if not crop:
+            raise ValueError("Missing required parameter: 'crop'")
+        
         n_years = params.get("years", 10)
 
         agri_df = datasets["agriculture"]
@@ -194,7 +222,10 @@ class AnalysisStage(PipelineStage):
         # Filter data
         agri = agri_df[(agri_df["state"] == state) & (agri_df["crop"] == crop)]
         if agri.empty:
-            raise ValueError("No production data found for the selected region/crop.")
+            raise ValueError(
+                f"No production data found for crop '{crop}' in state '{state}'. "
+                f"Please verify the crop name and state are correct."
+            )
 
         rainfall = rainfall_df[rainfall_df["state"] == state]
         if rainfall.empty:
@@ -245,9 +276,16 @@ class AnalysisStage(PipelineStage):
 
     def _analyze_policy_arguments(self, params: Dict, datasets: Dict[str, pd.DataFrame]) -> Dict:
         """Generate policy arguments for crop shift."""
-        state = params["state"]
-        current_crop = params["crop_a"]
-        proposed_crop = params["crop_b"]
+        # Support both "state" and "region" parameter names
+        state = params.get("state") or params.get("region")
+        if not state:
+            raise ValueError("Missing required parameter: 'state' or 'region'")
+        
+        current_crop = params.get("crop_a")
+        proposed_crop = params.get("crop_b")
+        if not current_crop or not proposed_crop:
+            raise ValueError(f"Missing required crops. Got crop_a={current_crop}, crop_b={proposed_crop}")
+        
         n_years = params.get("years", 5)
 
         agri_df = datasets["agriculture"]
