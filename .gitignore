@@ -26,36 +26,32 @@ venv/
 ENV/
 env/
 
-# Environment Variables
-.env
-.env.local
-
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+
+# Environment variables
+.env
+.env.local
+
+# OS
 .DS_Store
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Data snapshots (keep sample data, ignore API snapshots)
-backend/data/raw/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
+Thumbs.db
 
 # Logs
 *.log
 
-# Temporary files
-*.tmp
-/tmp/
-temp/
+# Data cache
+backend/data/cache/
+# *.csv  # Commented out to allow CSV files to be tracked
+backend/data/raw/
 
-# Netlify
-.netlify/
+# Pytest
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/

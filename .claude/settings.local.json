@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree:*)",
+      "Bash(python -m uvicorn:*)",
+      "Bash(python3 -m uvicorn:*)",
+      "Bash(python3:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(uvicorn app.main:app:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(timeout 5 curl:*)",
+      "Bash(export DATAGOV_API_KEY=579b464db66ec23bdd000001df2e1e87602e4576665f24c51bc77875)",
+      "Read(//private/tmp/**)",
+      "Bash(npm install:*)",
+      "Bash(netlify deploy:*)",
+      "Bash(netlify sites:create:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(git push)",
+      "Read(//Users/paritoshdwivedi/Downloads/Projects/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
