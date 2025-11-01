@@ -386,10 +386,6 @@
       <div class="control-grid">
         <div class="controls-row">
           <div>
-            <label for="backendUrl">Backend Endpoint</label>
-            <input id="backendUrl" type="url" placeholder="http://127.0.0.1:8000" />
-          </div>
-          <div>
             <label for="samplePrompts">Sample Prompts</label>
             <select id="samplePrompts">
               <option value="">— Select a sample question —</option>
@@ -445,14 +441,11 @@
     const tablesEl = document.getElementById("tables");
     const citationsEl = document.getElementById("citations");
     const debugEl = document.getElementById("debugInfo");
-    const backendInput = document.getElementById("backendUrl");
     const sampleSelect = document.getElementById("samplePrompts");
     const themeToggle = document.getElementById("themeToggle");
     const toggleLabel = themeToggle.querySelector(".toggle-label");
 
-    const DEFAULT_BACKEND = "http://127.0.0.1:8000";
-    const storedBackend = window.localStorage.getItem("samarthBackendUrl");
-    backendInput.value = storedBackend || DEFAULT_BACKEND;
+    const DEFAULT_BACKEND = "https://project-samarth-events.onrender.com";
 
     const storedTheme = window.localStorage.getItem("samarthTheme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -475,11 +468,6 @@
       window.localStorage.setItem("samarthTheme", next);
     });
 
-    backendInput.addEventListener("change", () => {
-      const value = backendInput.value.trim() || DEFAULT_BACKEND;
-      backendInput.value = value;
-      window.localStorage.setItem("samarthBackendUrl", value);
-    });
 
     function setStatus(text, active = false) {
       statusText.textContent = text;
@@ -501,8 +489,7 @@
       debugEl.textContent = "";
       responseCard.style.display = "none";
 
-      const backendUrl = (backendInput.value.trim() || DEFAULT_BACKEND).replace(/\/$/, "");
-      window.localStorage.setItem("samarthBackendUrl", backendUrl);
+      const backendUrl = DEFAULT_BACKEND.replace(/\/$/, "");
 
       try {
         const res = await fetch(`${backendUrl}/ask`, {
